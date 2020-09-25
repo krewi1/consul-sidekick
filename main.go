@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -23,7 +24,7 @@ type consulSideKick struct {
 }
 
 func (c consulSideKick) getPodInfo() (ip string, ownerSelector labels.Selector, err error) {
-	pod, err := c.k8sClient.CoreV1().Pods(c.namespace).Get(c.podName, v1.GetOptions{})
+	pod, err := c.k8sClient.CoreV1().Pods(c.namespace).Get(context.TODO(), c.podName, v1.GetOptions{})
 	if err != nil {
 		return "", nil, fmt.Errorf("cannot find consul pod (%s/%s): %v", c.namespace, c.podName, err)
 	}
@@ -35,7 +36,7 @@ func (c consulSideKick) getPodInfo() (ip string, ownerSelector labels.Selector, 
 		return "", nil, fmt.Errorf("consul pod (%s/%s) is not owned by a ReplicaSet", c.namespace, c.podName)
 	}
 	replicaSetName := ownerReference.Name
-	replicaSet, err := c.k8sClient.ReplicaSets(c.namespace).Get(replicaSetName, v1.GetOptions{})
+	replicaSet, err := c.k8sClient.AppsV1().ReplicaSets(c.namespace).Get(context.TODO(), replicaSetName, v1.GetOptions{})
 	if err != nil {
 		return "", nil, fmt.Errorf("Cannot access ReplicaSet (%s/%s)", c.namespace, replicaSetName)
 	}
@@ -50,7 +51,7 @@ func (c consulSideKick) getPodInfo() (ip string, ownerSelector labels.Selector, 
 func (c consulSideKick) getPodIPs(selector labels.Selector) (map[string]struct{}, error) {
 	podIPs := map[string]struct{}{}
 	listOptions := v1.ListOptions{LabelSelector: selector.String()}
-	podList, err := c.k8sClient.Pods(c.namespace).List(listOptions)
+	podList, err := c.k8sClient.CoreV1().Pods(c.namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return nil, fmt.Errorf("cannot obtain peer pods (selector: %s): %v", selector, err)
 	}
